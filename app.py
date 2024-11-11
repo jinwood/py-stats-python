@@ -1,11 +1,19 @@
-from flask import Flask, jsonify
-from flask_cors import CORS
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import psutil
 import os
 from typing import Dict, List, Optional, Union
 
-app = Flask(__name__)
-CORS(app)
+app = FastAPI()
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 
 def get_cpu_temp() -> Optional[float]:
@@ -54,20 +62,20 @@ def get_running_processes() -> List[Dict[str, Union[int, str, float]]]:
         except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
             print(f"Error accessing process: {e}")
             continue
-    return sorted(processes, key=lambda x: x.get("cpu_percent", 0), reverse=True)[
-        :10
-    ]  # Top 10 processes
+    return sorted(processes, key=lambda x: x.get("cpu_percent", 0), reverse=True)[:10]
 
 
-@app.route("/api/system")
-def system():
-    return jsonify(get_system_info())
+@app.get("/api/system")
+async def system():
+    return get_system_info()
 
 
-@app.route("/api/processes")
-def processes():
-    return jsonify(get_running_processes())
+@app.get("/api/processes")
+async def processes():
+    return get_running_processes()
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=5000)
